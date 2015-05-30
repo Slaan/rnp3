@@ -1,13 +1,22 @@
 package fileclient;
 
 /* FileCopyClient.java
- Version 0.1 - Muss erg�nzt werden!!
+ Version 0.1 - Muss ergaenzt werden!!
  Praktikum 3 Rechnernetze BAI4 HAW Hamburg
  Autoren:
  */
 
-import java.io.*;
-import java.net.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
+import data.FCbuffer;
+import data.FCpacket;
 
 public class FileCopyClient extends Thread {
 
@@ -19,45 +28,76 @@ public class FileCopyClient extends Thread {
   public final int UDP_PACKET_SIZE = 1008;
 
   // -------- Public parms
-  public String servername;
+  public final String servername;
 
-  public String sourcePath;
+  public final String sourcePath;
 
-  public String destPath;
+  public final String destPath;
 
-  public int windowSize;
+  public final int windowSize;
 
   public long serverErrorRate;
 
   // -------- Variables
   // current default timeout in nanoseconds
-  private long timeoutValue = 100000000L;
-
-  // ... ToDo
-
+  private long      timeoutValue = 100000000L;
+  
+  private FCbuffer buffer;
+  
+  private DatagramSocket socket;
+  
+  private InetAddress hostAdress;
+  
+  private int packetSize = 16000;
+  
+  private int sendBase = 0;
+  
+  private int nextSeqNum = 1;
 
   // Constructor
   public FileCopyClient(String serverArg, String sourcePathArg,
-    String destPathArg, String windowSizeArg, String errorRateArg) {
+    String destPathArg, String windowSizeArg, String errorRateArg) throws UnknownHostException {
     servername = serverArg;
     sourcePath = sourcePathArg;
     destPath = destPathArg;
     windowSize = Integer.parseInt(windowSizeArg);
     serverErrorRate = Long.parseLong(errorRateArg);
-
+    hostAdress = InetAddress.getByName(servername);
   }
 
-  public void runFileCopyClient() {
-
-      // ToDo!!
-
-
+  public void runFileCopyClient() throws Exception {
+    FCpacket fcPacket = makeControlPacket();
+    this.socket = new DatagramSocket();
+    DatagramPacket packet = 
+        new DatagramPacket(fcPacket.getData(), fcPacket.getLen(), hostAdress, SERVER_PORT);
+    this.buffer.add(fcPacket);
+    socket.send(packet);
+    startTimer(fcPacket);
+    socket.receive(packet);
+    fcPacket = new FCpacket(packet.getData(), fcPacket.getLen());
+    
+    InputStream fileStream = new FileInputStream(sourcePath);
+    byte[] bytePacket = new byte[packetSize];
+    while (fileStream.read(bytePacket) != 0) {
+      while (this.buffer.isFull()) {
+        socket.receive(packet);
+        fcPacket = new FCpacket(packet.getData(), packet.getLength());
+        this.cancelTimer(fcPacket);
+        this.buffer.markAsACK(fcPacket);
+      } 
+      FCpacket fileSlice = new FCpacket(nextSeqNum++, bytePacket, bytePacket.length);
+      this.buffer.add(fileSlice);
+      packet = new DatagramPacket(fileSlice.getData(), fileSlice.getLen(), hostAdress, SERVER_PORT);
+      socket.send(packet);
+      startTimer(fileSlice);
+    }
+    fileStream.close();
   }
 
   /**
-  *
-  * Timer Operations
-  */
+   * Timer operations
+   * @param packet
+   */
   public void startTimer(FCpacket packet) {
     /* Create, save and start timer for the given FCpacket */
     FC_Timer timer = new FC_Timer(timeoutValue, this, packet.getSeqNum());
@@ -76,9 +116,23 @@ public class FileCopyClient extends Thread {
 
   /**
    * Implementation specific task performed at timeout
+   * @throws IOException 
    */
   public void timeoutTask(long seqNum) {
-  // ToDo
+    testOut("Timeout: Timeout of " + seqNum + ".");
+    FCpacket lostPacket = buffer.getBySeqNum(seqNum);
+    DatagramPacket packet = 
+        new DatagramPacket(lostPacket.getData(), lostPacket.getLen(), hostAdress, SERVER_PORT);
+    boolean done = false;
+    while (!done) {
+      try {
+        socket.send(packet);
+        done = true;
+      } catch (IOException e) {
+        testOut("Timeout: IOException!");
+      }
+    }
+    startTimer(lostPacket);
   }
 
 
@@ -117,6 +171,13 @@ public class FileCopyClient extends Thread {
   }
 
   public static void main(String argv[]) throws Exception {
+    if (argv.length != 5) {
+      System.err.println("Invalid arguments!");
+      System.err.println("Please type: ");
+      System.err.println("             ./<>  servername source-path "
+                       + "destination-path window-size error-rate");
+      return;
+    }
     FileCopyClient myClient = new FileCopyClient(argv[0], argv[1], argv[2],
         argv[3], argv[4]);
     myClient.runFileCopyClient();

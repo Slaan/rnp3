@@ -1,4 +1,6 @@
-package fileclient;
+package data;
+
+import fileclient.FC_Timer;
 
 /* FCpacket.java
  Version 1.0

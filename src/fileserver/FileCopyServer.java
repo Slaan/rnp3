@@ -1,4 +1,4 @@
-package filecopy;
+package fileserver;
 
 
 /* FileCopyServer.java
@@ -11,7 +11,7 @@ import java.net.*;
 import java.util.Collections;
 import java.util.LinkedList;
 
-import fileclient.FCpacket;
+import data.FCpacket;
 
 
 public class FileCopyServer {
