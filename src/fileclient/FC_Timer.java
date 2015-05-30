@@ -19,6 +19,7 @@ public class FC_Timer extends Thread {
    * 
    */
   public FC_Timer(long timeout, FileCopyClient fc, long seqNum) {
+    super("FC_Timer");
     this.delay = timeout; // nanoseconds
     this.myFCC = fc;
     this.seqNum = seqNum;

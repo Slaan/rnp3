@@ -22,15 +22,16 @@ public class Receiver extends Thread {
   @Override
   public void run() {
     boolean done = false;
-    DatagramPacket packet = null;
+    byte[] data = new byte[FileCopyClient.UDP_PACKET_SIZE];
+    DatagramPacket packet = new DatagramPacket(data, data.length);
     while (!done) {
       try {
+        testOut("STILL ALIVE!");
         socket.receive(packet);
         FCpacket fcPacket = new FCpacket(packet.getData(), packet.getLength());
         cancelTimer(fcPacket);
         buffer.markAsACK(fcPacket);
       } catch (IOException e) {
-        // TODO Auto-generated catch block
         e.printStackTrace();
       }
     }

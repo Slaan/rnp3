@@ -26,7 +26,7 @@ public class FileCopyClient extends Thread {
 
   public final int SERVER_PORT = 23000;
 
-  public final int UDP_PACKET_SIZE = 1008;
+  public final static int UDP_PACKET_SIZE = 1008;
 
   // -------- Public parms
   public final String servername;
@@ -41,15 +41,13 @@ public class FileCopyClient extends Thread {
 
   // -------- Variables
   // current default timeout in nanoseconds
-  private long      timeoutValue = 1000000000L;
+  private long      timeoutValue = 10000000000L;
   
   private FCbuffer buffer;
   
   private DatagramSocket socket;
   
   private InetAddress hostAdress;
-  
-  private int packetSize = 16000;
   
   private int nextSeqNum = 1;
   
@@ -68,7 +66,6 @@ public class FileCopyClient extends Thread {
     buffer = new FCbuffer(windowSize, 0L);
     socket = new DatagramSocket();
     receiver = new Receiver(this.buffer, this.socket);
-    receiver.run();
   }
 
   public void runFileCopyClient() throws Exception {
@@ -79,8 +76,9 @@ public class FileCopyClient extends Thread {
     this.buffer.add(fcPacket);
     socket.send(packet);
     startTimer(fcPacket);
+    receiver.start();
     InputStream fileStream = new FileInputStream(sourcePath);
-    byte[] bytePacket = new byte[packetSize];
+    byte[] bytePacket = new byte[UDP_PACKET_SIZE];
     while (fileStream.read(bytePacket) != 0) {
       while (this.buffer.isFull()) {
         // block while buffer is full
