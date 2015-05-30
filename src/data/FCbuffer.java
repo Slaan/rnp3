@@ -9,12 +9,13 @@ public class FCbuffer {
   
   private FCpacket[] innerBuffer;
   
-  private long next = 0;
+  private int next = 0;
   
-  private long first = 0;
+  private int first = 0;
   
   public FCbuffer(long windowSize, Long sendBase) {
     this.windowSize = windowSize;
+    
     this.innerBuffer = new FCpacket[(int) windowSize];
     this.sendBase = sendBase;
   }
@@ -66,6 +67,7 @@ public class FCbuffer {
         FCpacket packet = this.innerBuffer[i];
         if (packet.isValidACK()) {
           this.incrementFirst();
+          this.sendBase = packet.getSeqNum();
         }
       }
     }
@@ -77,22 +79,24 @@ public class FCbuffer {
    */
   public FCpacket getBySeqNum(Long seqNum) {
     if (this.isEmpty()) {
-      return null;
+      throw new IllegalArgumentException("It's empty!");
     }
     for (int i = 0; i < this.innerBuffer.length; i++) {
       FCpacket packet = this.innerBuffer[i];
-      if (packet.getSeqNum() == seqNum) {
+      if (packet != null && packet.getSeqNum() == seqNum) {
         return packet;
       }      
     }
-    return null;
+    throw new IllegalArgumentException("Not found");
   }
   
   private void incrementNext() {
-    this.next = (((this.next+1) % this.windowSize) + this.windowSize) % this.windowSize;
+    int intWindowSize = (int) this.windowSize;
+    this.next = (((this.next+1) % intWindowSize) + intWindowSize) % intWindowSize;
   }
   
   private void incrementFirst() {
-    this.first = (((this.first+1) % this.windowSize) + this.windowSize) % this.windowSize;
+    int intWindowSize = (int) this.windowSize;
+    this.first = (((this.first+1) % intWindowSize) + intWindowSize) % intWindowSize;
   }
 }

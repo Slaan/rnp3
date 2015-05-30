@@ -13,6 +13,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 
 import data.FCbuffer;
@@ -21,7 +22,7 @@ import data.FCpacket;
 public class FileCopyClient extends Thread {
 
   // -------- Constants
-  public final static boolean TEST_OUTPUT_MODE = false;
+  public final static boolean TEST_OUTPUT_MODE = true;
 
   public final int SERVER_PORT = 23000;
 
@@ -40,7 +41,7 @@ public class FileCopyClient extends Thread {
 
   // -------- Variables
   // current default timeout in nanoseconds
-  private long      timeoutValue = 100000000L;
+  private long      timeoutValue = 1000000000L;
   
   private FCbuffer buffer;
   
@@ -50,40 +51,39 @@ public class FileCopyClient extends Thread {
   
   private int packetSize = 16000;
   
-  private int sendBase = 0;
-  
   private int nextSeqNum = 1;
+  
+  private Receiver receiver;
 
   // Constructor
   public FileCopyClient(String serverArg, String sourcePathArg,
-    String destPathArg, String windowSizeArg, String errorRateArg) throws UnknownHostException {
+    String destPathArg, String windowSizeArg, String errorRateArg) 
+        throws UnknownHostException, SocketException {
     servername = serverArg;
     sourcePath = sourcePathArg;
     destPath = destPathArg;
     windowSize = Integer.parseInt(windowSizeArg);
     serverErrorRate = Long.parseLong(errorRateArg);
     hostAdress = InetAddress.getByName(servername);
+    buffer = new FCbuffer(windowSize, 0L);
+    socket = new DatagramSocket();
+    receiver = new Receiver(this.buffer, this.socket);
+    receiver.run();
   }
 
   public void runFileCopyClient() throws Exception {
     FCpacket fcPacket = makeControlPacket();
-    this.socket = new DatagramSocket();
     DatagramPacket packet = 
         new DatagramPacket(fcPacket.getData(), fcPacket.getLen(), hostAdress, SERVER_PORT);
+    testOut(new String(fcPacket.getData()));
     this.buffer.add(fcPacket);
     socket.send(packet);
     startTimer(fcPacket);
-    socket.receive(packet);
-    fcPacket = new FCpacket(packet.getData(), fcPacket.getLen());
-    
     InputStream fileStream = new FileInputStream(sourcePath);
     byte[] bytePacket = new byte[packetSize];
     while (fileStream.read(bytePacket) != 0) {
       while (this.buffer.isFull()) {
-        socket.receive(packet);
-        fcPacket = new FCpacket(packet.getData(), packet.getLength());
-        this.cancelTimer(fcPacket);
-        this.buffer.markAsACK(fcPacket);
+        // block while buffer is full
       } 
       FCpacket fileSlice = new FCpacket(nextSeqNum++, bytePacket, bytePacket.length);
       this.buffer.add(fileSlice);
