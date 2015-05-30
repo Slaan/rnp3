@@ -68,7 +68,7 @@ public class FCbuffer {
     if (seqNum == this.sendBase) {
       for (int i = 0; i < this.innerBuffer.length; i++) {
         FCpacket packet = this.innerBuffer[i];
-        if (packet.isValidACK()) {
+        if (packet != null && packet.isValidACK()) {
           this.incrementFirst();
           this.sendBase = packet.getSeqNum();
         }

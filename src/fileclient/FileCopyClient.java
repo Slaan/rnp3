@@ -71,21 +71,29 @@ public class FileCopyClient extends Thread {
   public void runFileCopyClient() throws Exception {
     FCpacket fcPacket = makeControlPacket();
     DatagramPacket packet = 
-        new DatagramPacket(fcPacket.getData(), fcPacket.getLen(), hostAdress, SERVER_PORT);
+        new DatagramPacket(fcPacket.getSeqNumBytesAndData(), fcPacket.getLen()+8, hostAdress, SERVER_PORT);
     testOut(new String(fcPacket.getData()));
     this.buffer.add(fcPacket);
     socket.send(packet);
     startTimer(fcPacket);
+    // poll packet 0
+    long seqNum = -1;
+    while (seqNum != 0) {
+      socket.receive(packet);
+      fcPacket = new FCpacket(packet.getData(), packet.getLength());
+      seqNum = fcPacket.getSeqNum();
+    }
+    this.buffer.markAsACK(fcPacket);
     receiver.start();
     InputStream fileStream = new FileInputStream(sourcePath);
     byte[] bytePacket = new byte[UDP_PACKET_SIZE];
-    while (fileStream.read(bytePacket) != 0) {
+    while (fileStream.read(bytePacket) != -1) {
       while (this.buffer.isFull()) {
         // block while buffer is full
       } 
       FCpacket fileSlice = new FCpacket(nextSeqNum++, bytePacket, bytePacket.length);
       this.buffer.add(fileSlice);
-      packet = new DatagramPacket(fileSlice.getData(), fileSlice.getLen(), hostAdress, SERVER_PORT);
+      packet = new DatagramPacket(fileSlice.getSeqNumBytesAndData(), fileSlice.getLen()+8, hostAdress, SERVER_PORT);
       socket.send(packet);
       startTimer(fileSlice);
     }

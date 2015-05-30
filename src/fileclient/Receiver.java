@@ -26,9 +26,9 @@ public class Receiver extends Thread {
     DatagramPacket packet = new DatagramPacket(data, data.length);
     while (!done) {
       try {
-        testOut("STILL ALIVE!");
         socket.receive(packet);
         FCpacket fcPacket = new FCpacket(packet.getData(), packet.getLength());
+        testOut("Received: !" + new String(packet.getData()));
         cancelTimer(fcPacket);
         buffer.markAsACK(fcPacket);
       } catch (IOException e) {
@@ -39,7 +39,7 @@ public class Receiver extends Thread {
   
   public void cancelTimer(FCpacket packet) {
     /* Cancel timer for the given FCpacket */
-    testOut("Cancel Timer for packet" + packet.getSeqNum());
+    testOut("Cancel Timer for packet " + packet.getSeqNum());
 
     if (packet.getTimer() != null) {
       packet.getTimer().interrupt();
