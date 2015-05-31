@@ -111,4 +111,22 @@ public class FCbuffer {
       }
     }
   }
+  
+  public void cancelTimer(FCpacket packet) {
+    this.cancelTimer(packet.getSeqNum());
+  }
+  
+  public void cancelTimer(long seqNum) {
+    if (this.isEmpty()) {
+      throw new IllegalArgumentException("It's empty!");
+    }
+    for (int i = 0; i < this.innerBuffer.length; i++) {
+      FCpacket packet = this.innerBuffer[i];
+      if (packet != null && packet.getSeqNum() == seqNum) {
+        packet.getTimer().interrupt();
+        return;
+      }
+    }
+    throw new IllegalArgumentException("Reached end!");
+  }
 }

@@ -29,9 +29,10 @@ public class Receiver extends Thread {
         socket.receive(packet);
         FCpacket fcPacket = new FCpacket(packet.getData(), packet.getLength());
         testOut("Received: " + fcPacket.getSeqNum());
-        cancelTimer(fcPacket);
-        buffer.markAsACK(fcPacket);
+        fcPacket = this.buffer.getBySeqNum(fcPacket.getSeqNum());
+        fcPacket.getTimer().interrupt();
       } catch (IOException e) {
+        testOut("EXCEPTION");
         e.printStackTrace();
       }
     }

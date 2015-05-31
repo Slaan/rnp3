@@ -82,7 +82,8 @@ public class FileCopyClient extends Thread {
       fcPacket = new FCpacket(packet.getData(), packet.getLength());
       seqNum = fcPacket.getSeqNum();
     }
-    cancelTimer(fcPacket);
+    fcPacket = buffer.getBySeqNum(seqNum);
+    fcPacket.getTimer().interrupt();
     receiver.start();
     testOut("Start sending data!");
     InputStream fileStream = new FileInputStream(sourcePath);
@@ -92,8 +93,8 @@ public class FileCopyClient extends Thread {
         // block while buffer is full
       } 
       FCpacket fileSlice = new FCpacket(nextSeqNum++, bytePacket, bytePacket.length);
-      this.buffer.add(fileSlice);
       packet = new DatagramPacket(fileSlice.getSeqNumBytesAndData(), fileSlice.getLen()+8, hostAdress, SERVER_PORT);
+      this.buffer.add(fileSlice);
       socket.send(packet);
       startTimer(fileSlice);
     }
