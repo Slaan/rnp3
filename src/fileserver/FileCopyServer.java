@@ -68,7 +68,6 @@ public class FileCopyServer {
         serverSocket.receive(udpReceivePacket);
         receivedIPAddress = udpReceivePacket.getAddress();
         receivedPort = udpReceivePacket.getPort();
-        System.err.println(new String(udpReceivePacket.getData()));
 
         if (connectionEstablished == false) {
           // Establish new connection
@@ -90,6 +89,7 @@ public class FileCopyServer {
                                          udpReceivePacket.getLength());
 
           long seqNum = fcReceivePacket.getSeqNum();
+          System.err.println("SEQNUM: " + seqNum);
           recPacketCounter++;
 
           // Test on simulated error (packet checksum simulation)

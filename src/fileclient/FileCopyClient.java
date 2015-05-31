@@ -41,7 +41,7 @@ public class FileCopyClient extends Thread {
 
   // -------- Variables
   // current default timeout in nanoseconds
-  private long      timeoutValue = 10000000000L;
+  private long      timeoutValue = 1000000000L;
   
   private FCbuffer buffer;
   
@@ -49,7 +49,7 @@ public class FileCopyClient extends Thread {
   
   private InetAddress hostAdress;
   
-  private int nextSeqNum = 1;
+  private long nextSeqNum = 1;
   
   private Receiver receiver;
 
@@ -67,21 +67,21 @@ public class FileCopyClient extends Thread {
     socket = new DatagramSocket();
     receiver = new Receiver(this.buffer, this.socket);
   }
-
   public void runFileCopyClient() throws Exception {
     FCpacket fcPacket = makeControlPacket();
     DatagramPacket packet = 
         new DatagramPacket(fcPacket.getSeqNumBytesAndData(), fcPacket.getLen()+8, hostAdress, SERVER_PORT);
-    testOut(new String(fcPacket.getData()));
     this.buffer.add(fcPacket);
     socket.send(packet);
     startTimer(fcPacket);
     // poll packet 0
     long seqNum = -1;
+    testOut(new String(fcPacket.getSeqNumBytesAndData()));
     while (seqNum != 0L) {
-//      socket.receive(packet);
+      socket.receive(packet);
       fcPacket = new FCpacket(packet.getData(), packet.getLength());
       seqNum = fcPacket.getSeqNum();
+      testOut("SEQNUM: " + seqNum);
     }
     this.buffer.markAsACK(fcPacket);
     receiver.start();
@@ -129,7 +129,7 @@ public class FileCopyClient extends Thread {
     testOut("Timeout: Timeout of " + seqNum + ".");
     FCpacket lostPacket = buffer.getBySeqNum(seqNum);
     DatagramPacket packet = 
-        new DatagramPacket(lostPacket.getData(), lostPacket.getLen(), hostAdress, SERVER_PORT);
+      new DatagramPacket(lostPacket.getSeqNumBytesAndData(), lostPacket.getLen()+8, hostAdress, SERVER_PORT);
     boolean done = false;
     while (!done) {
       try {
@@ -167,7 +167,7 @@ public class FileCopyClient extends Thread {
     } catch (UnsupportedEncodingException e) {
       e.printStackTrace();
     }
-    return new FCpacket(0, sendData, sendData.length);
+    return new FCpacket(0L, sendData, sendData.length);
   }
 
   public void testOut(String out) {
