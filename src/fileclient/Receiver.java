@@ -74,6 +74,7 @@ public class Receiver extends Thread {
             buffer.removeFirst();
           } else {
             done = true;
+            System.out.println("Buffersize after udpate: "+buffer.size());
             break;
           }
         }

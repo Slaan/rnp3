@@ -24,7 +24,7 @@ public class FileCopyClient extends Thread {
 
   public final int SERVER_PORT = 23000;
 
-  public final static int UDP_PACKET_SIZE = 1008;
+  public final static int UDP_PACKET_SIZE = 1000;
 
   // -------- Public parms
   public InetAddress serveradress;
@@ -91,11 +91,18 @@ public class FileCopyClient extends Thread {
     byte[] bytePacket = new byte[UDP_PACKET_SIZE];
     new Receiver(sendBuf, socket, bufferlock, this).start();;
     while (fs.read(bytePacket) != -1) {
-      while (sendBuf.size() >= windowSize) {
-        
-        if (sendBuf.size()<windowSize) {
-          System.out.println("bla");
-          break;
+      boolean done = false;
+      while (!done) {
+        try {
+          bufferlock.acquire();
+          if (sendBuf.size()<windowSize) {
+            break;
+          }
+        } catch (InterruptedException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        } finally {
+          bufferlock.release();
         }
       }
       FCpacket part = new FCpacket(++seqNum, bytePacket, bytePacket.length);
@@ -146,8 +153,8 @@ public class FileCopyClient extends Thread {
    * @throws IOException
    */
   public void timeoutTask(long seqNum) {
-    try {
-      bufferlock.acquire();
+    
+      bufferlock.acquireUninterruptibly();
       for (FCpacket part : sendBuf) {
         if (part.getSeqNum() == seqNum) {
           DatagramPacket pack =
@@ -163,12 +170,7 @@ public class FileCopyClient extends Thread {
           part.setTimestamp(System.nanoTime());
         }
       }
-    } catch (InterruptedException e1) {
-      // TODO Auto-generated catch block
-      e1.printStackTrace();
-    } finally {    
       bufferlock.release();
-    }
     timeoutValue = timeoutValue*2;
   }
 
