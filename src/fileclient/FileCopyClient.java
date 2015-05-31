@@ -92,6 +92,7 @@ public class FileCopyClient extends Thread {
     new Receiver(sendBuf, socket, bufferlock, this).start();;
     while (fs.read(bytePacket) != -1) {
       while (sendBuf.size() >= windowSize) {
+        
         if (sendBuf.size()<windowSize) {
           System.out.println("bla");
           break;
@@ -159,6 +160,7 @@ public class FileCopyClient extends Thread {
             e.printStackTrace();
           }
           startTimer(part);
+          part.setTimestamp(System.nanoTime());
         }
       }
     } catch (InterruptedException e1) {
@@ -167,6 +169,7 @@ public class FileCopyClient extends Thread {
     } finally {    
       bufferlock.release();
     }
+    timeoutValue = timeoutValue*2;
   }
 
   /**
@@ -175,13 +178,15 @@ public class FileCopyClient extends Thread {
    */
   public void computeTimeoutValue(long sampleRTT) {
 
-//    double x = 0.25;
-//    long expRTT = (long) ((1-(x/2)) *sampleRTT+timeoutValue);
-//    long absolut = Math.abs(sampleRTT - rtt);
-//    long newjitter = (long) ((1-x) * jitter + x *  absolut);
-//    rtt = sampleRTT;
-//    timeoutValue = expRTT + 4*newjitter;
-//    System.out.println("new timeout: " + timeoutValue + "s");
+    int timeoutsec = (int) (timeoutValue/1000000);
+    double x = 0.25;
+    double y = x/2;
+    long expRTT = (long) ((1-y) *sampleRTT + y*timeoutValue);
+    long absolut = Math.abs(sampleRTT - rtt);
+    long newjitter = (long) ((1-x) * jitter + x *  absolut);
+    rtt = sampleRTT;
+    timeoutValue = expRTT + 4*newjitter;
+    System.out.println("new timeout: " + timeoutsec + "micro s");
   }
 
   /**

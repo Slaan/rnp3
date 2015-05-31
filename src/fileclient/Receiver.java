@@ -41,7 +41,7 @@ public class Receiver extends Thread {
         for (FCpacket part : buffer) {
           if (part.equals(ackpack)) {
             part.setValidACK(true);
-            client.computeTimeoutValue(part.getTimestamp());
+            client.computeTimeoutValue(System.nanoTime()-part.getTimestamp());
             part.getTimer().interrupt();
             break;
           }
