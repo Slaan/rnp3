@@ -39,6 +39,7 @@ public class FC_Timer extends Thread {
     try {
       sleep(millis, nanos);
     } catch (InterruptedException e) {
+      System.err.println("INTERRUPT!");
       /* Timer cancelled */
       isCancelled = true;
     }

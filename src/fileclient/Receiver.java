@@ -28,7 +28,7 @@ public class Receiver extends Thread {
       try {
         socket.receive(packet);
         FCpacket fcPacket = new FCpacket(packet.getData(), packet.getLength());
-        testOut("Received: !" + new String(packet.getData()));
+        testOut("Received: " + fcPacket.getSeqNum());
         cancelTimer(fcPacket);
         buffer.markAsACK(fcPacket);
       } catch (IOException e) {

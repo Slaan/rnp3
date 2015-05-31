@@ -78,13 +78,14 @@ public class FileCopyClient extends Thread {
     startTimer(fcPacket);
     // poll packet 0
     long seqNum = -1;
-    while (seqNum != 0) {
-      socket.receive(packet);
+    while (seqNum != 0L) {
+//      socket.receive(packet);
       fcPacket = new FCpacket(packet.getData(), packet.getLength());
       seqNum = fcPacket.getSeqNum();
     }
     this.buffer.markAsACK(fcPacket);
     receiver.start();
+    testOut("Start sending data!");
     InputStream fileStream = new FileInputStream(sourcePath);
     byte[] bytePacket = new byte[UDP_PACKET_SIZE];
     while (fileStream.read(bytePacket) != -1) {
