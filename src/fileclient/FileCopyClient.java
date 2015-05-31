@@ -32,6 +32,12 @@ public class FileCopyClient extends Thread {
   // -------- Variables
   // current default timeout in nanoseconds
   private long timeoutValue = 100000000L;
+  
+  private int timeout = 1000000;
+  
+  private DatagramSocket socket;
+  
+  private byte[] receiveData;
 
   // ... ToDo
 
@@ -44,14 +50,47 @@ public class FileCopyClient extends Thread {
     destPath = destPathArg;
     windowSize = Integer.parseInt(windowSizeArg);
     serverErrorRate = Long.parseLong(errorRateArg);
-
+    try {
+      socket = new DatagramSocket(8080);
+    } catch (SocketException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   }
 
   public void runFileCopyClient() {
 
-      // ToDo!!
-
-
+    InetAddress targetadress = null;
+    try {
+      targetadress = InetAddress.getByName(servername);
+    } catch (UnknownHostException e1) {
+      // TODO Auto-generated catch block
+      e1.printStackTrace();
+    }
+    FCpacket startfcpackage = makeControlPacket();
+    DatagramPacket startdatagrampackage = new DatagramPacket(
+        startfcpackage.getData(), startfcpackage.getLen(), targetadress,SERVER_PORT);
+    try {
+      socket.send(startdatagrampackage);
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      System.out.println("startpackage didnt get send");
+      e.printStackTrace();
+    }
+    DatagramPacket back = new DatagramPacket(receiveData, UDP_PACKET_SIZE);
+    try {
+      socket.receive(back);
+      System.out.println(back.getData());
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    try {
+      wait(100000000000L);
+    } catch (InterruptedException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   }
 
   /**
