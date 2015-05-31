@@ -57,6 +57,7 @@ public class FCbuffer {
     for (int i = 0; i < this.innerBuffer.length; i++) {
       FCpacket packet = this.innerBuffer[i];
       if (packet.getSeqNum() == seqNum) {
+        System.err.println("Valid ack for " + seqNum + " received!");
         packet.setValidACK(true);
         break;
       }

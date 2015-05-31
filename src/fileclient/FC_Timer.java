@@ -27,11 +27,11 @@ public class FC_Timer extends Thread {
   }
 
   public void run() {
+    /*
+     * Timer sleeps until delay is over (--> timeoutTask - call!) or is
+     * interrupted
+     */
     try {
-      /*
-       * Timer sleeps until delay is over (--> timeoutTask - call!) or is
-       * interrupted
-       */
       long millis = delay / 1000000L;
       int nanos = (int) (delay % 1000000L);
       myFCC.testOut("FC_Timer started for packet: " + seqNum + " Delay: "

@@ -81,9 +81,8 @@ public class FileCopyClient extends Thread {
       socket.receive(packet);
       fcPacket = new FCpacket(packet.getData(), packet.getLength());
       seqNum = fcPacket.getSeqNum();
-      testOut("SEQNUM: " + seqNum);
     }
-    this.buffer.markAsACK(fcPacket);
+    cancelTimer(fcPacket);
     receiver.start();
     testOut("Start sending data!");
     InputStream fileStream = new FileInputStream(sourcePath);
