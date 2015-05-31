@@ -37,8 +37,8 @@ public class FileCopyClient extends Thread {
   
   private DatagramSocket socket;
   
-  private byte[] receiveData;
-
+  private FCpacket[] fcbuffer;
+  
   // ... ToDo
 
 
@@ -51,7 +51,7 @@ public class FileCopyClient extends Thread {
     windowSize = Integer.parseInt(windowSizeArg);
     serverErrorRate = Long.parseLong(errorRateArg);
     try {
-      socket = new DatagramSocket(8082);
+      socket = new DatagramSocket(8080);
     } catch (SocketException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -60,28 +60,17 @@ public class FileCopyClient extends Thread {
 
   public void runFileCopyClient() throws IOException {
 
-   FCpacket startfcpackage = makeControlPacket();
-    DatagramPacket startdatagrampackage = new DatagramPacket(
-        startfcpackage.getData(), startfcpackage.getLen(), serveradress,SERVER_PORT);
-    socket.send(startdatagrampackage);
-    FCpacket testpackage = new FCpacket(startdatagrampackage.getData(), startdatagrampackage.getLength());
-    System.out.println("muh " + testpackage.getSeqNum());
+   FCpacket sendFc = makeControlPacket();
+    DatagramPacket sendpackage = new DatagramPacket(
+        sendFc.getSeqNumBytesAndData(), sendFc.getLen()+8, serveradress,SERVER_PORT);
+    socket.send(sendpackage);
     try {
-      System.out.println("meh");
-      socket.receive(startdatagrampackage);
-      System.out.println("mieh");
-      FCpacket nice = new FCpacket(startdatagrampackage.getData(), startdatagrampackage.getLength());
-      testOut(nice.getData().toString());
+      socket.receive(sendpackage);
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
-    try {
-      wait(100000000000L);
-    } catch (InterruptedException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+    
   }
 
   /**
@@ -130,6 +119,7 @@ public class FileCopyClient extends Thread {
    /* Create first packet with seq num 0. Return value: FCPacket with
      (0 destPath ; windowSize ; errorRate) */
     String sendString = destPath + ";" + windowSize + ";" + serverErrorRate;
+    System.out.println(sendString);
     byte[] sendData = null;
     try {
       sendData = sendString.getBytes("UTF-8");
