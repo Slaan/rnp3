@@ -3,6 +3,7 @@ package fileclient;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.SocketTimeoutException;
 import java.util.LinkedList;
 import java.util.concurrent.Semaphore;
 
@@ -31,21 +32,27 @@ public class Receiver extends Thread {
       DatagramPacket packet = new DatagramPacket(data, data.length);
       try {
         socket.receive(packet);
+      } catch (SocketTimeoutException e1) {
+        done=true;
+        System.out.println("Catchblock");
       } catch (IOException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
-      }
+      } 
       FCpacket ackpack = new FCpacket(packet.getData(), packet.getLength());
       try {
         lock.acquire();
         for (FCpacket part : buffer) {
           if (part.equals(ackpack)) {
             part.setValidACK(true);
-            client.computeTimeoutValue(System.nanoTime()-part.getTimestamp());
+            long rtt = System.nanoTime()-part.getTimestamp();
+            client.computeTimeoutValue(rtt);
+            client.add_total_rtt(rtt);
             part.getTimer().interrupt();
             break;
           }
         }
+        client.increment_received_acks();
       } catch (InterruptedException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
@@ -58,6 +65,7 @@ public class Receiver extends Thread {
         }
       }
     }
+    System.out.println("end of receiver");
   }
   
 

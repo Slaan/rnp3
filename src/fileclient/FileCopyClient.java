@@ -53,7 +53,15 @@ public class FileCopyClient extends Thread {
   
   private long rtt;
 
-  // ... ToDo
+  // ... Endausgabe
+  
+  private long total_rtt;
+  
+  private long total_send_pack;
+  
+  private long received_acks;
+  
+  private long retransmit_packs;
 
 
   // Constructor
@@ -66,30 +74,41 @@ public class FileCopyClient extends Thread {
     serverErrorRate = Long.parseLong(errorRateArg);
     try {
       socket = new DatagramSocket(8080);
+      socket.setSoTimeout(5000);
     } catch (SocketException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
+
     sendBuf = new LinkedList<FCpacket>();
+    total_rtt=0L;
+    total_send_pack=0L;
+    received_acks=0L;
+    retransmit_packs=0L;
   }
 
   public void runFileCopyClient() throws IOException {
 
     bufferlock = new Semaphore(1, true);
-    FCpacket sendFc = makeControlPacket();
+    long starttime = System.nanoTime();
+    FCpacket sendFc = makeControlPacket();  
     DatagramPacket sendpackage =
         new DatagramPacket(sendFc.getSeqNumBytesAndData(), sendFc.getLen() + 8, serveradress,
             SERVER_PORT);
     long timestamp = System.nanoTime();
     socket.send(sendpackage);
+    total_send_pack++;
     socket.receive(sendpackage);
     rtt = System.nanoTime() - timestamp + 10000000L;
     timeoutValue = rtt + 50000L;
+    total_rtt += rtt;
+    received_acks++;
     FCpacket recvpack = new FCpacket(sendpackage.getData(), sendpackage.getLength());
     testOut("Package " + recvpack.getSeqNum() + " ACKd");
     InputStream fs = new FileInputStream(sourcePath);
     byte[] bytePacket = new byte[UDP_PACKET_SIZE];
-    new Receiver(sendBuf, socket, bufferlock, this).start();;
+    Receiver rec = new Receiver(sendBuf, socket, bufferlock, this);
+    rec.start();
     while (fs.read(bytePacket) != -1) {
       boolean done = false;
       while (!done) {
@@ -111,6 +130,7 @@ public class FileCopyClient extends Thread {
               SERVER_PORT);
       System.out.println("sendPackage No " + seqNum);
       socket.send(pack);
+      total_send_pack++;
       try {
         bufferlock.acquire();
         part.setTimestamp(System.nanoTime());
@@ -125,6 +145,20 @@ public class FileCopyClient extends Thread {
     }
     fs.close();
     System.out.println("Client: FileTransfer done");
+    try {
+      rec.join();
+    } catch (InterruptedException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    long total_time = System.nanoTime() - starttime;
+    int tt_milli = (int) total_time/1000000;
+    System.out.println("-------------------- END OF DATA TRANSFER ------------------");
+    System.out.println("Total_Time: " + tt_milli +  "ms");
+    System.out.println("Number of Retransmit: " + retransmit_packs);
+    System.out.println("Number of Received Acks: " + received_acks);
+    long average_rtt = total_rtt/received_acks;
+    System.out.println("Average RTT: " + average_rtt + " ns");
   }
 
   /**
@@ -147,6 +181,22 @@ public class FileCopyClient extends Thread {
     }
   }
 
+  public void add_total_rtt(long rtt) {
+    total_rtt+=rtt;
+  }
+  
+  public void incremet_send_packs() {
+    total_send_pack++;
+  }
+  
+  public void increment_retransmit_packs() {
+    retransmit_packs++;
+  }
+  
+  public void increment_received_acks() {
+    received_acks++;
+  }
+  
   /**
    * Implementation specific task performed at timeout
    * 
@@ -162,6 +212,8 @@ public class FileCopyClient extends Thread {
                   SERVER_PORT);
           try {
             socket.send(pack);
+            increment_retransmit_packs();
+            incremet_send_packs();
           } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
