@@ -89,6 +89,7 @@ public class FileCopyServer {
                                          udpReceivePacket.getLength());
 
           long seqNum = fcReceivePacket.getSeqNum();
+          System.out.println("Package with seqNum " + seqNum + " received");
           recPacketCounter++;
 
           // Test on simulated error (packet checksum simulation)
@@ -104,7 +105,6 @@ public class FileCopyServer {
               if (setParameters(fcReceivePacket)) {
                 // open destination file
                 outToFile = new FileOutputStream(destPath);
-                sendAck(fcReceivePacket);
               } else {
                 // Wrong parameter packet --> End!
                 break;

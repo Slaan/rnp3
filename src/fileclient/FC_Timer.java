@@ -40,13 +40,14 @@ public class FC_Timer extends Thread {
     } catch (InterruptedException e) {
       /* Timer cancelled */
       isCancelled = true;
+      myFCC.testOut("FC_Timer cancelled! Packet: " + seqNum);
     }
-
-    myFCC.testOut("FC_Timer stopped! Packet: " + seqNum);
-
+    
     /* Perform task if not cancelled */
     if (!isCancelled) {
       myFCC.timeoutTask(seqNum);
     }
+    
+    myFCC.testOut("FC_Timer ended! Packet: " + seqNum);
   }
 }
