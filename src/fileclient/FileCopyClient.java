@@ -48,6 +48,10 @@ public class FileCopyClient extends Thread {
   private LinkedList<FCpacket> sendBuf;
 
   private Semaphore bufferlock;
+  
+  private long jitter = 0L;
+  
+  private long rtt;
 
   // ... ToDo
 
@@ -76,16 +80,20 @@ public class FileCopyClient extends Thread {
     DatagramPacket sendpackage =
         new DatagramPacket(sendFc.getSeqNumBytesAndData(), sendFc.getLen() + 8, serveradress,
             SERVER_PORT);
+    long timestamp = System.nanoTime();
     socket.send(sendpackage);
     socket.receive(sendpackage);
+    rtt = System.nanoTime() - timestamp + 10000000L;
+    timeoutValue = rtt + 50000L;
     FCpacket recvpack = new FCpacket(sendpackage.getData(), sendpackage.getLength());
     testOut("Package " + recvpack.getSeqNum() + " ACKd");
     InputStream fs = new FileInputStream(sourcePath);
     byte[] bytePacket = new byte[UDP_PACKET_SIZE];
-    new Receiver(sendBuf, socket, bufferlock).start();;
+    new Receiver(sendBuf, socket, bufferlock, this).start();;
     while (fs.read(bytePacket) != -1) {
       while (sendBuf.size() >= windowSize) {
         if (sendBuf.size()<windowSize) {
+          System.out.println("bla");
           break;
         }
       }
@@ -97,6 +105,7 @@ public class FileCopyClient extends Thread {
       socket.send(pack);
       try {
         bufferlock.acquire();
+        part.setTimestamp(System.nanoTime());
         sendBuf.add(part);
       } catch (InterruptedException e) {
         // TODO Auto-generated catch block
@@ -160,14 +169,19 @@ public class FileCopyClient extends Thread {
     }
   }
 
-
   /**
    *
    * Computes the current timeout value (in nanoseconds)
    */
   public void computeTimeoutValue(long sampleRTT) {
 
-    // ToDo
+//    double x = 0.25;
+//    long expRTT = (long) ((1-(x/2)) *sampleRTT+timeoutValue);
+//    long absolut = Math.abs(sampleRTT - rtt);
+//    long newjitter = (long) ((1-x) * jitter + x *  absolut);
+//    rtt = sampleRTT;
+//    timeoutValue = expRTT + 4*newjitter;
+//    System.out.println("new timeout: " + timeoutValue + "s");
   }
 
   /**

@@ -12,12 +12,15 @@ public class Receiver extends Thread {
   private LinkedList<FCpacket> buffer;
   private DatagramSocket socket;
   private Semaphore lock;
+  private FileCopyClient client;
 
-  public Receiver(LinkedList<FCpacket> buffer2, DatagramSocket socket, Semaphore bufferlock) {
+  public Receiver(LinkedList<FCpacket> buffer2, DatagramSocket socket, 
+      Semaphore bufferlock, FileCopyClient fcc) {
     super("Receiver");
     this.buffer = buffer2;
     this.socket = socket;
     this.lock = bufferlock;
+    this.client = fcc;
   }
 
   @Override
@@ -38,6 +41,7 @@ public class Receiver extends Thread {
         for (FCpacket part : buffer) {
           if (part.equals(ackpack)) {
             part.setValidACK(true);
+            client.computeTimeoutValue(part.getTimestamp());
             part.getTimer().interrupt();
             break;
           }
@@ -55,6 +59,7 @@ public class Receiver extends Thread {
       }
     }
   }
+  
 
   public void updateBuffer() {
     try {
