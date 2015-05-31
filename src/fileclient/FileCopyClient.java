@@ -12,14 +12,14 @@ import java.net.*;
 public class FileCopyClient extends Thread {
 
   // -------- Constants
-  public final static boolean TEST_OUTPUT_MODE = false;
+  public final static boolean TEST_OUTPUT_MODE = true;
 
   public final int SERVER_PORT = 23000;
 
   public final int UDP_PACKET_SIZE = 1008;
 
   // -------- Public parms
-  public String servername;
+  public InetAddress serveradress;
 
   public String sourcePath;
 
@@ -44,43 +44,34 @@ public class FileCopyClient extends Thread {
 
   // Constructor
   public FileCopyClient(String serverArg, String sourcePathArg,
-    String destPathArg, String windowSizeArg, String errorRateArg) {
-    servername = serverArg;
+    String destPathArg, String windowSizeArg, String errorRateArg) throws UnknownHostException {
+    serveradress = InetAddress.getByName(serverArg);
     sourcePath = sourcePathArg;
     destPath = destPathArg;
     windowSize = Integer.parseInt(windowSizeArg);
     serverErrorRate = Long.parseLong(errorRateArg);
     try {
-      socket = new DatagramSocket(8080);
+      socket = new DatagramSocket(8082);
     } catch (SocketException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
   }
 
-  public void runFileCopyClient() {
+  public void runFileCopyClient() throws IOException {
 
-    InetAddress targetadress = null;
-    try {
-      targetadress = InetAddress.getByName(servername);
-    } catch (UnknownHostException e1) {
-      // TODO Auto-generated catch block
-      e1.printStackTrace();
-    }
-    FCpacket startfcpackage = makeControlPacket();
+   FCpacket startfcpackage = makeControlPacket();
     DatagramPacket startdatagrampackage = new DatagramPacket(
-        startfcpackage.getData(), startfcpackage.getLen(), targetadress,SERVER_PORT);
+        startfcpackage.getData(), startfcpackage.getLen(), serveradress,SERVER_PORT);
+    socket.send(startdatagrampackage);
+    FCpacket testpackage = new FCpacket(startdatagrampackage.getData(), startdatagrampackage.getLength());
+    System.out.println("muh " + testpackage.getSeqNum());
     try {
-      socket.send(startdatagrampackage);
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      System.out.println("startpackage didnt get send");
-      e.printStackTrace();
-    }
-    DatagramPacket back = new DatagramPacket(receiveData, UDP_PACKET_SIZE);
-    try {
-      socket.receive(back);
-      System.out.println(back.getData());
+      System.out.println("meh");
+      socket.receive(startdatagrampackage);
+      System.out.println("mieh");
+      FCpacket nice = new FCpacket(startdatagrampackage.getData(), startdatagrampackage.getLength());
+      testOut(nice.getData().toString());
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
